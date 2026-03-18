@@ -27,13 +27,36 @@ runs:
         WORKFLOW_URL: ${{ inputs.workflow-run-url }}
         PR_URL: ${{ inputs.pr-url }}
       run: |
-        BASE=$'*['"${TITLE}"'] Feature Flags Drift Detected in E2E tests vs Prod* :warning:\n\nCheck the workflow run for details: download the drift report JSON artifact and review the report.\n\nYou can run command `yarn feature-flags:sync:update` locally to update the registry.\n\n'
+        # Use multiple blocks instead of newlines - more reliable in Slack
         if [[ -n "$PR_URL" ]]; then
-          MSG="${BASE}A sync PR has been created: <${PR_URL}|View PR>"$'\n\n'"<${WORKFLOW_URL}|View workflow run>"
+          PAYLOAD=$(jq -n \
+            --arg title "$TITLE" \
+            --arg pr_url "$PR_URL" \
+            --arg workflow_url "$WORKFLOW_URL" \
+            '{
+              text: ("*[" + $title + "] Feature Flags Drift Detected in E2E tests vs Prod* :warning:"),
+              blocks: [
+                { type: "section", text: { type: "mrkdwn", text: ("*[" + $title + "] Feature Flags Drift Detected in E2E tests vs Prod* :warning:") } },
+                { type: "section", text: { type: "mrkdwn", text: "Check the workflow run for details: download the drift report JSON artifact and review the report." } },
+                { type: "section", text: { type: "mrkdwn", text: "You can run command `yarn feature-flags:sync:update` locally to update the registry." } },
+                { type: "section", text: { type: "mrkdwn", text: ("A sync PR has been created: <" + $pr_url + "|View PR>") } },
+                { type: "section", text: { type: "mrkdwn", text: ("<" + $workflow_url + "|View workflow run>") } }
+              ]
+            }')
         else
-          MSG="${BASE}<${WORKFLOW_URL}|View workflow run>"
+          PAYLOAD=$(jq -n \
+            --arg title "$TITLE" \
+            --arg workflow_url "$WORKFLOW_URL" \
+            '{
+              text: ("*[" + $title + "] Feature Flags Drift Detected in E2E tests vs Prod* :warning:"),
+              blocks: [
+                { type: "section", text: { type: "mrkdwn", text: ("*[" + $title + "] Feature Flags Drift Detected in E2E tests vs Prod* :warning:") } },
+                { type: "section", text: { type: "mrkdwn", text: "Check the workflow run for details: download the drift report JSON artifact and review the report." } },
+                { type: "section", text: { type: "mrkdwn", text: "You can run command `yarn feature-flags:sync:update` locally to update the registry." } },
+                { type: "section", text: { type: "mrkdwn", text: ("<" + $workflow_url + "|View workflow run>") } }
+              ]
+            }')
         fi
-        PAYLOAD=$(jq -n --arg m "$MSG" '{text: $m, blocks: [{type: "section", text: {type: "mrkdwn", text: $m}}]}')
         {
           echo "payload<<EOF"
           printf '%s\n' "$PAYLOAD"
