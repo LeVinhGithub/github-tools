@@ -24,6 +24,11 @@ on:
         type: string
         default: ''
         description: 'Label to apply to the created PR (must exist in the target repo)'
+      workflow-run-url:
+        required: false
+        type: string
+        default: ''
+        description: 'URL of the workflow run (for artifact download link in PR body)'
     secrets:
       github-token:
         required: true
@@ -67,6 +72,7 @@ jobs:
         id: pr-body
         env:
           REPORT_ARTIFACT: ${{ inputs.report-artifact-name }}
+          WORKFLOW_RUN_URL: ${{ inputs.workflow-run-url }}
         run: |
           REPORT_FILE="$REPORT_ARTIFACT/report.json"
           if [[ ! -f "$REPORT_FILE" ]]; then
@@ -81,7 +87,11 @@ jobs:
             echo ""
             echo "Feature flag drift was detected between E2E tests and production."
             echo ""
-            echo "Download the \`$REPORT_ARTIFACT\` artifact from the workflow run for the full report."
+            if [[ -n "$WORKFLOW_RUN_URL" ]]; then
+              echo "Download the [\`$REPORT_ARTIFACT\` artifact]($WORKFLOW_RUN_URL) for the full report."
+            else
+              echo "Download the \`$REPORT_ARTIFACT\` artifact from the workflow run for the full report."
+            fi
           } > pr-body.md
 
       - name: Create branch and commit registry change
@@ -91,7 +101,7 @@ jobs:
           REGISTRY_ARTIFACT: ${{ inputs.registry-artifact-name }}
           REGISTRY_PATH: ${{ inputs.registry-file-path }}
         run: |
-          BRANCH="qa/sync-ff-registry-$REPOSITORY"
+          BRANCH="qa/sync-ff-registry-$REPOSITORY-$(date -u +%Y-%m-%d-%H%M)"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
