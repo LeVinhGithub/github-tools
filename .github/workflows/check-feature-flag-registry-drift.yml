@@ -79,11 +79,9 @@ jobs:
           {
             echo "## Feature Flag Registry Drift Report"
             echo ""
-            echo "The following drift was detected between E2E tests and production:"
+            echo "Feature flag drift was detected between E2E tests and production."
             echo ""
-            echo '```json'
-            cat "$REPORT_FILE"
-            echo '```'
+            echo "Download the \`$REPORT_ARTIFACT\` artifact from the workflow run for the full report."
           } > pr-body.md
 
       - name: Create branch and commit registry change
